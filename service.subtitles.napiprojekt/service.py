@@ -5,19 +5,11 @@ import sys
 import urllib
 import shutil
 import unicodedata
-
-try:
-    import xbmc
-    import xbmcvfs
-    import xbmcaddon
-    import xbmcplugin
-    import xbmcgui
-except ImportError:
-    from stubs import xbmc
-    from stubs import xbmcvfs
-    from stubs import xbmcaddon
-    from stubs import xbmcplugin
-    from stubs import xbmcgui
+import xbmc
+import xbmcvfs
+import xbmcaddon
+import xbmcplugin
+import xbmcgui
 
 try:
     #Python 2.6 +
@@ -91,6 +83,7 @@ def Search(item):
     d = timeout(set_filehash, args=(item["file_original_path"], item["rar"]), timeout_duration=15)
 
     for language in item["3let_language"]:
+        language = "pl" if language == "pol" else language
         params = {
             "l": language.upper(),
             "f": d.hexdigest(),
@@ -102,7 +95,7 @@ def Search(item):
             "napios": os.name
         }
 
-        url = "http://napiprojekt.pl/unit_napisy/dl.php?"+urllib.urlencode(params)
+        url = "http://napiprojekt.pl/unit_napisy/dl.php?" + urllib.urlencode(params)
         subs = urllib.urlopen(url).read()
 
         if subs[0:4] != 'NPc0':
@@ -121,7 +114,8 @@ def Search(item):
 
             ## below arguments are optional, it can be used to pass any info needed in download function
             ## anything after "action=download&" will be sent to addon once user clicks listed subtitle to download
-            url = "plugin://%s/?action=download&l=%s&f=%s&t=%s&filename=%s" % (__scriptid__, params["l"], params["f"], params["t"], file_name)
+            url = "plugin://%s/?action=download&l=%s&f=%s&t=%s&filename=%s" % (
+            __scriptid__, params["l"], params["f"], params["t"], file_name)
             ## add it to list, this can be done as many times as needed for all subtitles found
             xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
 
@@ -155,7 +149,7 @@ def Download(l, f, t, filename):
         "napios": os.name
     }
 
-    url = "http://napiprojekt.pl/unit_napisy/dl.php?"+urllib.urlencode(params)
+    url = "http://napiprojekt.pl/unit_napisy/dl.php?" + urllib.urlencode(params)
 
     sub = urllib.urlopen(url).read()
     with open(filename, "wb") as subFile:
