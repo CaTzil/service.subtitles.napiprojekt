@@ -56,7 +56,12 @@ def set_filehash(path, rar):
     d = md5()
     qpath = urllib.quote(path)
     if rar:
-        path = """rar://""" + qpath
+        path = """rar://""" + qpath + '/'
+        for file in xbmcvfs.listdir(path)[1]:
+            if (file.lower().endswith(('.avi','.mkv','.mp4'))):
+                path = path + file
+                break
+
     d.update(xbmcvfs.File(path, "rb").read(10485760))
     return d
 
