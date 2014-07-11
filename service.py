@@ -125,14 +125,6 @@ def Search(item):
             xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
 
 
-# item = {'episode': '11', 'temp': False, 'title': '', 'season': '11', 'year': '', 'rar': False,
-#         'tvshow': 'Two and a Half Men',
-#         'file_original_path': u'D:\\Videos\\Series\\Two.and.a.Half.Men\\Season 11\\Two.and.a.Half.Men.S11E13.480p.HDTV.X264-DIMENSION.mkv',
-#         '3let_language': ['eng', 'heb']}
-#
-# print Search(item)
-
-
 def Download(l, f, t, filename):
     subtitle_list = []
     ## Cleanup temp dir, we recomend you download/unzip your subs in temp folder and
@@ -192,8 +184,6 @@ def get_params():
 
 
 params = get_params()
-
-print params
 
 if params['action'] == 'search':
     item = {}
