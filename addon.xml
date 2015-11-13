@@ -11,10 +11,10 @@
 		<summary lang="en">Napiprojekt.pl</summary>
 		<description lang="en">Search and Download subtitles from napiprojekt.pl.</description>
 		<source>https://github.com/CaTzil/service.subtitles.napiprojekt</source>
-		<language></language>
-		<email></email>
-		<forum></forum>
-		<website></website>
+		<language> </language>
+		<email> </email>
+		<forum> </forum>
+		<website> </website>
 		<license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
     </extension>
 </addon>
