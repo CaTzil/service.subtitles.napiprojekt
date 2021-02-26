@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*- 
 
 import os
+import re
+import shutil
 import sys
 import urllib
-import shutil
+from urllib.parse import unquote
+
 import unicodedata
 import xbmc
-import xbmcvfs
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
+import xbmcvfs
+import hashlib
 
 try:
     # Python 2.6 +
@@ -24,48 +28,14 @@ __scriptname__ = __addon__.getAddonInfo('name')
 __version__ = __addon__.getAddonInfo('version')
 __language__ = __addon__.getLocalizedString
 
-__cwd__ = xbmc.translatePath(__addon__.getAddonInfo('path')).decode("utf-8")
-__profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile')).decode("utf-8")
-__resource__ = xbmc.translatePath(os.path.join(__cwd__, 'resources', 'lib')).decode("utf-8")
-__temp__ = xbmc.translatePath(os.path.join(__profile__, 'temp', '')).decode("utf-8")
+__cwd__ = xbmcvfs.translatePath(__addon__.getAddonInfo('path'))
+__profile__ = xbmcvfs.translatePath(__addon__.getAddonInfo('profile'))
+__resource__ = xbmcvfs.translatePath(os.path.join(__cwd__, 'resources', 'lib'))
+__temp__ = xbmcvfs.translatePath(os.path.join(__profile__, 'temp', ''))
 
-sys.path.append(__resource__)
+# sys.path.append(__resource__)
 
-from NapiProjekt import NapiProjektHelper
-
-
-def timeout(func, args=(), kwargs={}, timeout_duration=10, default=None):
-    import threading
-
-    class InterruptableThread(threading.Thread):
-        def __init__(self):
-            threading.Thread.__init__(self)
-            self.result = "000000000000"
-
-        def run(self):
-            self.result = func(*args, **kwargs)
-
-    it = InterruptableThread()
-    it.start()
-    it.join(timeout_duration)
-    if it.isAlive():
-        return it.result
-    else:
-        return it.result
-
-
-def set_filehash(path, rar):
-    d = md5()
-    qpath = urllib.quote(path, safe='')
-    if rar:
-        path = """rar://""" + qpath + '/'
-        for file in xbmcvfs.listdir(path)[1]:
-            if (file.lower().endswith(('.avi', '.mkv', '.mp4'))):
-                path = path + file
-                break
-
-    d.update(xbmcvfs.File(path, "rb").read(10485760))
-    return d
+from resources.lib.NapiProjekt import NapiProjektHelper
 
 
 def f(z):
@@ -74,7 +44,7 @@ def f(z):
     add = [0, 0xd, 0x10, 0xb, 0x5]
 
     b = []
-    for i in xrange(len(idx)):
+    for i in range(len(idx)):
         a = add[i]
         m = mul[i]
         i = idx[i]
@@ -87,31 +57,33 @@ def f(z):
 
 
 def Search(item):
-    d = timeout(set_filehash, args=(item["file_original_path"], item["rar"]), timeout_duration=15)
-    md5hash = d.hexdigest()
-    t = f(md5hash)
     filename = '.'.join(os.path.basename(item["file_original_path"]).split(".")[:-1])
-    helper = NapiProjektHelper(filename, md5hash)
-    results = helper.search(item, t)
+
+    d = md5()
+    ff = open(item["file_original_path"], 'rb')
+    fff = ff.read(10485760)
+    d.update(fff)
+    k = d.hexdigest()
+    tt = f(d.hexdigest())
+
+    helper = NapiProjektHelper(filename, k)
+    results = helper.search(item, tt)
 
     for result in results:
         listitem = xbmcgui.ListItem(label=xbmc.convertLanguage(result["language"], xbmc.ENGLISH_NAME),
                                     # language name for the found subtitle
                                     label2=filename,  # file name for the found subtitle
-                                    iconImage="5",  # rating for the subtitle, string 0-5
-                                    thumbnailImage=xbmc.convertLanguage(result["language"], xbmc.ISO_639_1)
                                     # language flag, ISO_639_1 language + gif extention, e.g - "en.gif"
                                     )
+        listitem.setArt({'icon': "5", 'thumb': xbmc.convertLanguage(result["language"], xbmc.ISO_639_1)})
         listitem.setProperty("sync", '{0}'.format("true").lower())  # set to "true" if subtitle is matched by hash,
-        # indicates that sub is 100 Comaptible
-        listitem.setProperty("hearing_imp",
-                             '{0}'.format("false").lower())  # set to "true" if subtitle is for hearing impared
 
-        ## below arguments are optional, it can be used to pass any info needed in download function
-        ## anything after "action=download&" will be sent to addon once user clicks listed subtitle to download
+
+        # # below arguments are optional, it can be used to pass any info needed in download function
+        # # anything after "action=download&" will be sent to addon once user clicks listed subtitle to download
         url = "plugin://%s/?action=download&l=%s&f=%s&filename=%s" % (
-            __scriptid__, result["language"], md5hash, filename)
-        ## add it to list, this can be done as many times as needed for all subtitles found
+            __scriptid__, result["language"], k, filename)
+        # # add it to list, this can be done as many times as needed for all subtitles found
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
 
 
@@ -119,8 +91,8 @@ def Download(language, hash, filename):
     subtitle_list = []
     ## Cleanup temp dir, we recomend you download/unzip your subs in temp folder and
     ## pass that to XBMC to copy and activate
-    if xbmcvfs.exists(__temp__):
-        shutil.rmtree(__temp__)
+    # if xbmcvfs.exists(__temp__):
+    #     shutil.rmtree(__temp__)
     xbmcvfs.mkdirs(__temp__)
 
     filename = os.path.join(__temp__, filename + ".zip")
@@ -130,11 +102,31 @@ def Download(language, hash, filename):
 
     return subtitle_list
 
+def convert(data):
+    if isinstance(data, bytes):
+        return data.decode()
+    if isinstance(data, (str, int)):
+        return str(data)
+    if isinstance(data, dict):
+        return dict(map(convert, data.items()))
+    if isinstance(data, tuple):
+        return tuple(map(convert, data))
+    if isinstance(data, list):
+        return list(map(convert, data))
+    if isinstance(data, set):
+        return set(map(convert, data))
 
-def normalizeString(str):
-    return unicodedata.normalize(
-        'NFKD', unicode(unicode(str, 'utf-8'))
-    ).encode('ascii', 'ignore')
+
+def normalizeString(title):
+    try:
+        return str(''.join(
+            c for c in unicodedata.normalize('NFKD', convert(title)) if unicodedata.category(c) != 'Mn')).replace('ł',
+                                                                                                                  'l')
+    except:
+        title = convert(title).replace('ą', 'a').replace('ę', 'e').replace('ć', 'c').replace('ź', 'z').replace('ż',
+                                                                                                               'z').replace(
+            'ó', 'o').replace('ł', 'l').replace('ń', 'n').replace('ś', 's')
+        return title
 
 
 def get_params():
@@ -167,13 +159,13 @@ if params['action'] == 'search':
     item['episode'] = str(xbmc.getInfoLabel("VideoPlayer.Episode"))  # Episode
     item['tvshow'] = normalizeString(xbmc.getInfoLabel("VideoPlayer.TVshowtitle"))  # Show
     item['title'] = normalizeString(xbmc.getInfoLabel("VideoPlayer.OriginalTitle"))  # try to get original title
-    item['file_original_path'] = urllib.unquote(
-        xbmc.Player().getPlayingFile().decode('utf-8'))  # Full path of a playing file
+    item['file_original_path'] = urllib.parse.unquote(
+        xbmc.Player().getPlayingFile())  # Full path of a playing file
     item['3let_language'] = []
-    item['preferredlanguage'] = unicode(urllib.unquote(params.get('preferredlanguage', '')), 'utf-8')
+    item['preferredlanguage'] = urllib.parse.unquote(params.get('preferredlanguage', ''))
     item['preferredlanguage'] = xbmc.convertLanguage(item['preferredlanguage'], xbmc.ISO_639_2)
 
-    for lang in urllib.unquote(params['languages']).decode('utf-8').split(","):
+    for lang in urllib.parse.unquote(params['languages']).split(","):
         item['3let_language'].append(xbmc.convertLanguage(lang, xbmc.ISO_639_2))
 
     if item['title'] == "":
