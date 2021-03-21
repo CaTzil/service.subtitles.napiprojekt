@@ -1,6 +1,6 @@
 # *-* coding: utf-8 *-*
 
-import os
+from os import path
 import base64
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -16,7 +16,7 @@ __scriptname__ = __addon__.getAddonInfo('name')
 __version__ = __addon__.getAddonInfo('version')
 __language__ = __addon__.getLocalizedString
 __profile__ = xbmcvfs.translatePath(__addon__.getAddonInfo('profile'))
-__temp__ = xbmcvfs.translatePath(os.path.join(__profile__, 'temp', ''))
+__temp__ = xbmcvfs.translatePath(path.join(__profile__, 'temp', ''))
 
 
 def log(msg):
@@ -80,10 +80,11 @@ class NapiProjektHelper:
                     cNodes[0].getElementsByTagName("subtitles")[0].getElementsByTagName("content")[0].childNodes[
                         0].data)
                 filename = self.md5hash + ".srt"
-                filepath = os.path.join(__temp__, filename)
-                vFile = xbmcvfs.File(filepath, 'w')
-                vFile.write(content)
-                vFile.close()
+                filepath = path.join(__temp__, filename)
+
+                with xbmcvfs.File(filepath, 'w') as vFile:
+                    vFile.write(content)
+
                 subtitle_list.append(filepath)
 
         except Exception as e:

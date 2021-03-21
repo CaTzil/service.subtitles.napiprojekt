@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*- 
 
-import os
-import sys
+from os import path
+from sys import argv
 from urllib.parse import unquote, quote_plus
-import unicodedata
+from unicodedata import normalize
 from hashlib import md5
+from resources.lib.NapiProjekt import NapiProjektHelper, log
 
 import xbmc
 import xbmcvfs
@@ -20,13 +21,8 @@ __language__ = __addon__.getLocalizedString
 
 __cwd__ = xbmcvfs.translatePath(__addon__.getAddonInfo('path'))
 __profile__ = xbmcvfs.translatePath(__addon__.getAddonInfo('profile'))
-__resource__ = xbmcvfs.translatePath(os.path.join(__cwd__, 'resources', 'lib'))
-__temp__ = xbmcvfs.translatePath(os.path.join(__profile__, 'temp', ''))
-
-sys.path.append(__resource__)
-
-from NapiProjekt import NapiProjektHelper, log
-
+__resource__ = xbmcvfs.translatePath(path.join(__cwd__, 'resources', 'lib'))
+__temp__ = xbmcvfs.translatePath(path.join(__profile__, 'temp', ''))
 
 def timeout(func, args=(), kwargs={}, timeout_duration=10, default=None):
     import threading
@@ -58,9 +54,9 @@ def get_filehash(path, rar):
                 path = path + file
                 break
 
-    file = xbmcvfs.File(path, "rb")
-    d.update(file.readBytes(10485760))
-    file.close()
+    with xbmcvfs.File(path, "rb") as file:
+        d.update(file.readBytes(10485760))
+
     return d.hexdigest()
 
 
@@ -87,7 +83,7 @@ def Search(item):
     log("MD5: %s" % md5hash)
 
     file_token = get_file_token(md5hash)
-    filename = '.'.join(os.path.basename(item["file_original_path"]).split(".")[:-1])
+    filename = '.'.join(path.basename(item["file_original_path"]).split(".")[:-1])
 
     napi_helper = NapiProjektHelper(md5hash)
     results = napi_helper.search(item, file_token)
@@ -105,7 +101,7 @@ def Search(item):
         ## anything after "action=download&" will be sent to addon once user clicks listed subtitle to download
         url = "plugin://%s/?action=download&l=%s&h=%s" % (__scriptid__, result["language"], md5hash)
         ## add it to list, this can be done as many times as needed for all subtitles found
-        xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
+        xbmcplugin.addDirectoryItem(handle=int(argv[1]), url=url, listitem=listitem, isFolder=False)
 
 
 def Download(language, hash):
@@ -114,7 +110,7 @@ def Download(language, hash):
     if xbmcvfs.exists(__temp__):
         (dirs, files) = xbmcvfs.listdir(__temp__)
         for file in files:
-            xbmcvfs.delete(os.path.join(__temp__, file))
+            xbmcvfs.delete(path.join(__temp__, file))
     else:
         xbmcvfs.mkdirs(__temp__)
 
@@ -125,12 +121,12 @@ def Download(language, hash):
 
 
 def normalizeString(str):
-    return unicodedata.normalize('NFKD', str)
+    return normalize('NFKD', str)
 
 
 def get_params():
     param = []
-    paramstring = sys.argv[2]
+    paramstring = argv[2]
     if len(paramstring) >= 2:
         params = paramstring
         cleanedparams = params.replace('?', '')
@@ -178,7 +174,7 @@ if params['action'] == 'search':
 
     elif (item['file_original_path'].find("rar://") > -1):
         item['rar'] = True
-        item['file_original_path'] = os.path.dirname(item['file_original_path'][6:])
+        item['file_original_path'] = path.dirname(item['file_original_path'][6:])
 
     elif (item['file_original_path'].find("stack://") > -1):
         stackPath = item['file_original_path'].split(" , ")
@@ -194,6 +190,6 @@ elif params['action'] == 'download':
     ## we can return more than one subtitle for multi CD versions, for now we are still working out how to handle that in XBMC core
     for sub in subs:
         listitem = xbmcgui.ListItem(label=sub)
-        xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=sub, listitem=listitem, isFolder=False)
+        xbmcplugin.addDirectoryItem(handle=int(argv[1]), url=sub, listitem=listitem, isFolder=False)
 
-xbmcplugin.endOfDirectory(int(sys.argv[1]))  ## send end of directory to XBMC
+xbmcplugin.endOfDirectory(int(argv[1]))  ## send end of directory to XBMC
