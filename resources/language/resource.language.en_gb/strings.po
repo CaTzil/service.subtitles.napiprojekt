@@ -15,3 +15,27 @@ msgstr ""
 msgctxt "#32001"
 msgid "Failed to download the subtitle"
 msgstr ""
+
+msgctxt "#32002"
+msgid "No matching subtitles were found"
+msgstr ""
+
+msgctxt "#32003"
+msgid "Kodi did not provide a video file"
+msgstr ""
+
+msgctxt "#32004"
+msgid "Could not calculate the video hash"
+msgstr ""
+
+msgctxt "#32005"
+msgid "NapiProjekt request limit reached. Try again later"
+msgstr ""
+
+msgctxt "#32006"
+msgid "Could not connect to NapiProjekt"
+msgstr ""
+
+msgctxt "#32007"
+msgid "NapiProjekt returned an invalid response"
+msgstr ""
